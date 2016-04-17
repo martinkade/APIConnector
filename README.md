@@ -6,9 +6,9 @@ These objects will be encoded to JSON strings and decoded from JSON strings, res
 ### Defining an entity class
 To start with, one has to specify an entity class using annotations to identify relevant attributes.
 ```java
-public class ResponseEntity implements APIService.Entity {
+public class ResponseEntity implements ApiService.Entity {
   
-    @JSONAttribute(name = "status")
+    @JsonAttribute(name = "status")
     private String status;
     
     /*...*/
@@ -18,18 +18,18 @@ public class ResponseEntity implements APIService.Entity {
 Then setup the service instance itself and the delegate object, either by implementing its methods at class level
 or as object (see below).
 ```java
-final APIService.Delegate delegate = new APIService.Delegate<ResponseEntity>() { /*...*/ };
-final APIService<ResponseEntity, RequestEntity> service = new APIService<>(delegate);
+final ApiService.Delegate delegate = new ApiService.Delegate<ResponseEntity>() { /*...*/ };
+final ApiService<ResponseEntity, RequestEntity> service = new ApiService<>(delegate);
 
 /*...*/
 ```
 Then you are ready to build a post request, for instance, setting some parameters like timeout or charset. You can post Java
-objects directly as long as the class of each of these objects is implementing the `APIService.Entity` interface. Alternatively,
+objects directly as long as the class of each of these objects is implementing the `ApiService.Entity` interface. Alternatively,
 you can post a plain `java.util.Map` by calling `post.setRawRequestData(map)`.
 ```java
 /*...*/
 
-final APIPutRequest<ResponseEntity, RequestEntity> put = new APIPostRequest<>("http://api.example.com/data", ResponseEntity.class);
+final ApiPutRequest<ResponseEntity, RequestEntity> put = new ApiPutRequest<>("http://api.example.com/data", ResponseEntity.class);
 put.setTimeoutSeconds(5);
 put.addUrlParam("key", "value");
 
@@ -62,5 +62,5 @@ public void apiServiceDidReceiveResponse(ResponseEntity obj, long execTimeMillis
 }
 
 @Override
-public void apiServiceDidThrowException(APIException ex, String id, int httpStatusCode) { /*...*/ }
+public void apiServiceDidThrowException(ApiException ex, String id, int httpStatusCode) { /*...*/ }
 ```
