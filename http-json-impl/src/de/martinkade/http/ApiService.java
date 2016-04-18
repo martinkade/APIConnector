@@ -26,9 +26,8 @@ package de.martinkade.http;
 import de.martinkade.http.request.ApiRequest;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -38,9 +37,11 @@ import java.util.logging.Logger;
  * <p/>
  * @author Martin Kade
  * @version Tue, 5 January 2016
- * @param <T>
+ * <p/>
+ * @param <E> The request class
+ * @param <T> The expected response class
  */
-public class ApiService<T extends ApiService.Entity> implements ApiTask.Delegate<T> {
+public class ApiService<E extends ApiService.Entity, T extends ApiService.Entity> implements ApiTask.Delegate<T> {
 
     /**
      * Entity type interface.
@@ -55,6 +56,12 @@ public class ApiService<T extends ApiService.Entity> implements ApiTask.Delegate
      * @param <T>
      */
     public static interface Delegate<T> {
+
+        /**
+         *
+         * @param runnable
+         */
+        void apiServiceWillSendResponse(Runnable runnable);
 
         /**
          *
@@ -88,7 +95,7 @@ public class ApiService<T extends ApiService.Entity> implements ApiTask.Delegate
     /**
      * The service executing the different {@link ApiTask} instances.
      */
-    private ScheduledExecutorService executor;
+    private ExecutorService executor;
 
     /**
      * Constructor.
@@ -104,41 +111,52 @@ public class ApiService<T extends ApiService.Entity> implements ApiTask.Delegate
     }
 
     /**
+     * Trigger request execution.
      *
-     * @param request
-     * @param delayMillis
-     * @param id
+     * @param request The request to be executed
+     * @param id An id or tag for exactly this request
      * @throws ApiException
      */
-    public final void exec(ApiRequest<T> request, long delayMillis, String id) throws ApiException {
+    public final void exec(final ApiRequest<T> request, final String id) throws ApiException {
         final long startTime = System.currentTimeMillis();
         final ApiTask task = new ApiTask(request, this);
         task.setIdentifier(id);
-        executor.schedule(task, delayMillis, TimeUnit.MILLISECONDS);
+        executor.submit(task);
 
-        try {
-            final ApiRequest r = task.get();
-            delegate.apiServiceDidReceiveResponse(
-                    r.getResponseData(), r.getRawResponse(), System.currentTimeMillis() - startTime,
-                    id, request.getResponseCode()
-            );
-        } catch (InterruptedException | ExecutionException ex) {
-            Logger.getLogger(TAG).log(Level.SEVERE, null, ex);
-            if (ex instanceof ApiException) {
-                final ApiException e = (ApiException) ex;
-                delegate.apiServiceDidThrowException(e, id, request.getResponseCode());
-                throw e;
-            } else {
-                final ApiException e = new ApiException(
-                        ex.getMessage(),
-                        ApiException.APIError.CONNECTION_TIMEOUT
-                );
-                delegate.apiServiceDidThrowException(e, id, request.getResponseCode());
-                throw e;
+        final Runnable notificationHandler = new Runnable() {
+
+            @Override
+            public void run() {
+                try {
+                    final ApiRequest r = task.get();
+                    final long execTime = System.currentTimeMillis() - startTime;
+                    Logger.getLogger(getClass().getSimpleName())
+                            .log(Level.INFO, String.format("%s: %dms", id, execTime));
+                    delegate.apiServiceDidReceiveResponse(
+                            r.getResponseData(), r.getRawResponse(), execTime,
+                            id, request.getResponseCode()
+                    );
+                } catch (InterruptedException | ExecutionException ex) {
+                    Logger.getLogger(TAG).log(Level.SEVERE, null, ex);
+                    if (ex instanceof ApiException) {
+                        final ApiException e = (ApiException) ex;
+                        delegate.apiServiceDidThrowException(e, id, request.getResponseCode());
+                        throw e;
+                    } else {
+                        final ApiException e = new ApiException(
+                                ex.getMessage(),
+                                ApiException.APIError.CONNECTION_TIMEOUT
+                        );
+                        Logger.getLogger(getClass().getSimpleName()).log(Level.WARNING, e.getMessage());
+                        delegate.apiServiceDidThrowException(e, id, request.getResponseCode());
+                        throw e;
+                    }
+                } finally {
+                    task.done();
+                }
             }
-        } finally {
-            task.done();
-        }
+        };
+        delegate.apiServiceWillSendResponse(notificationHandler);
     }
 
     @Override
@@ -150,7 +168,7 @@ public class ApiService<T extends ApiService.Entity> implements ApiTask.Delegate
     }
 
     public void prepare() {
-        executor = Executors.newScheduledThreadPool(1);
+        executor = Executors.newCachedThreadPool();
     }
 
     public void release() {

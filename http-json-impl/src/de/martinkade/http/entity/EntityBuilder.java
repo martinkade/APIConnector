@@ -138,6 +138,8 @@ public class EntityBuilder<T extends ApiService.Entity> {
                 value = ((LocalTime) value).format(DateTimeFormatter.ofPattern("HH:mm:ss"));
             } else if (value instanceof LocalDateTime) {
                 value = ((LocalDateTime) value).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            } else if (value instanceof Enum) {
+                value = ((Enum) value).name().toLowerCase();
             }
 
             json.put(attrName, value);
@@ -268,6 +270,8 @@ public class EntityBuilder<T extends ApiService.Entity> {
                 v = ((Number) value).intValue();
             } else if (Float.class.isAssignableFrom(fieldType) || fieldType.getName().equals("float")) {
                 v = ((Number) value).floatValue();
+            } else if (Enum.class.isAssignableFrom(fieldType)) {
+                v = Enum.valueOf((Class<? extends Enum>) fieldType, ((String) value).toUpperCase());
             } else {
                 v = (value instanceof JSONObject) ? null : value;
             }

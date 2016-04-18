@@ -25,6 +25,7 @@ package de.martinkade.http.request;
 
 import de.martinkade.http.ApiException;
 import de.martinkade.http.ApiService;
+import de.martinkade.http.entity.EntityBuilder;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -39,10 +40,10 @@ import org.json.simple.parser.ParseException;
 /**
  * ...
  * <p/>
- *
- * @param <T>
  * @author Martin Kade
  * @version Tue, 5 January 2016
+ * <p/>
+ * @param <T> The expected response class
  */
 public class ApiGetRequest<T extends ApiService.Entity> extends ApiRequest<T> {
 
@@ -50,10 +51,11 @@ public class ApiGetRequest<T extends ApiService.Entity> extends ApiRequest<T> {
      * Construtcor.
      *
      * @param url The url the request will be executed on
-     * @param responseClass
+     * @param responseClass The expected response class
      */
     public ApiGetRequest(String url, Class<T> responseClass) {
         super(url, responseClass);
+        responseBuilder = new EntityBuilder<>();
     }
 
     @Override
@@ -81,7 +83,7 @@ public class ApiGetRequest<T extends ApiService.Entity> extends ApiRequest<T> {
             }
 
             rawResponse = response.toString();
-            return builder.decode(rawResponse, responseClass);
+            return responseBuilder.decode(rawResponse, responseClass);
         } catch (ParseException | IOException ex) {
             Logger.getLogger(TAG).log(Level.SEVERE, null, ex);
             throw new ApiException(ex.getMessage(), ApiException.APIError.IO_ERROR);

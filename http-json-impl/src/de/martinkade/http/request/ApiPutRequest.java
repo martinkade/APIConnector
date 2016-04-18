@@ -32,16 +32,14 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 
-import java.util.HashMap;
 import java.nio.charset.Charset;
 
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
 /**
@@ -51,69 +49,58 @@ import org.json.simple.parser.ParseException;
  * @version Tue, 5 January 2016
  * <p/>
  * @param <T> The expected response class
+ * @param <E> The request class
  */
-public class ApiPostRequest<T extends ApiService.Entity> extends ApiRequest<T> {
+public class ApiPutRequest<T extends ApiService.Entity, E extends ApiService.Entity> extends ApiRequest<T> {
 
     /**
-     * Post parameters.
+     * Request data of type {@link APIService.Entity}.
      */
-    private Map<String, String> params;
+    private E requestData;
+
+    /**
+     * Raw, already as {@link JSONObject} encoded request data.
+     */
+    private JSONObject rawRequestData;
+
+    /**
+     * The entity builder for the request.
+     */
+    private EntityBuilder<E> requestBuilder;
 
     /**
      * Constructor.
      *
      * @param url The url the request will be executed on
-     * @param responseClass The expected response class
+     * @param responseClass
      */
-    public ApiPostRequest(String url, Class<T> responseClass) {
+    public ApiPutRequest(String url, Class<T> responseClass) {
         super(url, responseClass);
         responseBuilder = new EntityBuilder<>();
-        contentType = "application/x-www-form-urlencoded";
+        requestBuilder = new EntityBuilder<>();
     }
 
     @Override
     protected void config(String urlParams) throws IOException, ApiException {
         super.config(urlParams);
-        connection.setRequestMethod("POST");
+        connection.setRequestMethod("PUT");
         connection.setRequestProperty("Content-Type", contentType);
         connection.setRequestProperty("Content-Length",
-                Integer.toString(params == null
-                        ? 0
-                        : getPostDataString().length)
+                Integer.toString(requestData == null
+                        ? rawRequestData.toJSONString().getBytes(Charset.forName(charset)).length
+                        : requestBuilder.encode(requestData).getBytes(Charset.forName(charset)).length)
         );
         connection.connect();
     }
 
-    /**
-     *
-     * @param key
-     * @param value
-     */
-    public final void addFormParameter(String key, String value) {
-        if (params == null) {
-            params = new HashMap<>();
-        }
-        params.put(key, value);
+    public final void setRequestData(E requestData) {
+        this.requestData = requestData;
+        this.rawRequestData = null;
     }
 
-    /**
-     *
-     * @return @throws UnsupportedEncodingException
-     */
-    private byte[] getPostDataString() throws UnsupportedEncodingException {
-        StringBuilder result = new StringBuilder();
-        boolean first = true;
-        for (Map.Entry<String, String> entry : params.entrySet()) {
-            if (first) {
-                first = false;
-            } else {
-                result.append("&");
-            }
-            result.append(URLEncoder.encode(entry.getKey(), charset));
-            result.append("=");
-            result.append(URLEncoder.encode(entry.getValue(), charset));
-        }
-        return result.toString().getBytes(Charset.forName(charset));
+    public void setRawRequestData(Map rawRequestData) {
+        this.rawRequestData = new JSONObject(rawRequestData);
+        this.requestData = null;
     }
 
     @Override
@@ -122,9 +109,9 @@ public class ApiPostRequest<T extends ApiService.Entity> extends ApiRequest<T> {
 
             // send request
             final DataOutputStream out = new DataOutputStream(connection.getOutputStream());
-            out.write(params == null
-                    ? "".getBytes(Charset.forName(charset))
-                    : getPostDataString());
+            out.write(requestData == null
+                    ? rawRequestData.toJSONString().getBytes(Charset.forName(charset))
+                    : requestBuilder.encode(requestData).getBytes(Charset.forName(charset)));
             out.flush();
 
             // receive response

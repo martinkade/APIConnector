@@ -42,10 +42,10 @@ import java.util.logging.Logger;
 /**
  * ...
  * <p/>
- *
- * @param <T>
  * @author Martin Kade
  * @version Tue, 5 January 2016
+ * <p/>
+ * @param <T> The expected response class
  */
 public abstract class ApiRequest<T extends ApiService.Entity> implements Callable<ApiRequest<T>> {
 
@@ -65,14 +65,14 @@ public abstract class ApiRequest<T extends ApiService.Entity> implements Callabl
     protected T responseData;
 
     /**
-     * Raw json response string.
-     */
-    protected String rawResponse;
-
-    /**
      * Response class.
      */
     protected Class<T> responseClass;
+
+    /**
+     * Raw json response string.
+     */
+    protected String rawResponse;
 
     /**
      * The url string.
@@ -90,35 +90,25 @@ public abstract class ApiRequest<T extends ApiService.Entity> implements Callabl
     private Map<String, String> urlParams;
 
     /**
-     * The connection state.
+     * The connection state and the specified timeout to waot for the response.
      */
-    protected int responseCode;
+    protected int responseCode, timeoutSeconds;
 
     /**
-     *
+     * Content type and charset as string.
      */
-    protected int timeoutSeconds;
+    protected String contentType, charset;
 
     /**
-     *
+     * The entity builder for the response.
      */
-    protected String contentType;
-
-    /**
-     *
-     */
-    protected String charset;
-
-    /**
-     * The entity builder reference.
-     */
-    protected EntityBuilder<T> builder;
+    protected EntityBuilder<T> responseBuilder;
 
     /**
      * Constructor.
      *
      * @param url The url the request will be executed on
-     * @param responseClass
+     * @param responseClass The expected response class
      */
     public ApiRequest(String url, Class<T> responseClass) {
         this.url = url;
@@ -194,6 +184,8 @@ public abstract class ApiRequest<T extends ApiService.Entity> implements Callabl
     protected abstract T run(String urlParams) throws ApiException;
 
     /**
+     * Configure the HTTP connection.
+     *
      * @param urlParams Url params
      * @throws IOException
      * @throws ApiException
@@ -211,7 +203,9 @@ public abstract class ApiRequest<T extends ApiService.Entity> implements Callabl
     }
 
     /**
-     * @return
+     * Enocde the url paramaters to a string.
+     *
+     * @return The url parameters as a single string
      */
     private String encodeUrlParams() {
         if (urlParams == null || urlParams.isEmpty()) {

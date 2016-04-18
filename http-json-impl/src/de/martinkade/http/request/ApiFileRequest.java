@@ -43,10 +43,10 @@ import org.json.simple.parser.ParseException;
 /**
  * ...
  * <p/>
- *
- * @param <T>
  * @author Martin Kade
  * @version Tue, 5 January 2016
+ * <p/>
+ * @param <T> The expected response class
  */
 public class ApiFileRequest<T extends ApiService.Entity> extends ApiRequest<T> {
 
@@ -59,12 +59,12 @@ public class ApiFileRequest<T extends ApiService.Entity> extends ApiRequest<T> {
      * Constructor.
      *
      * @param url The url the request will be executed on
-     * @param responseClass
+     * @param responseClass The expected response class
      */
     public ApiFileRequest(String url, Class<T> responseClass) {
         super(url, responseClass);
         contentType = "multipart/form-data;boundary=---------------------------4664151417711";
-        builder = new EntityBuilder<>();
+        responseBuilder = new EntityBuilder<>();
     }
 
     @Override
@@ -117,7 +117,7 @@ public class ApiFileRequest<T extends ApiService.Entity> extends ApiRequest<T> {
             }
 
             rawResponse = response.toString();
-            return builder.decode(rawResponse, responseClass);
+            return responseBuilder.decode(rawResponse, responseClass);
         } catch (ParseException | IOException ex) {
             Logger.getLogger(TAG).log(Level.SEVERE, null, ex);
             throw new ApiException(ex.getMessage(), ApiException.APIError.IO_ERROR);

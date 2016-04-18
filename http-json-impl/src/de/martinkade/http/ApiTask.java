@@ -31,10 +31,10 @@ import java.util.concurrent.FutureTask;
 /**
  * ...
  * <p/>
- *
- * @param <T>
  * @author Martin Kade
  * @version Tue, 5 January 2016
+ * <p/>
+ * @param <T> The expected response class
  */
 public class ApiTask<T extends ApiService.Entity> extends FutureTask<ApiRequest<T>> {
 

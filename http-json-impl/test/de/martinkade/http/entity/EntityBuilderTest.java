@@ -47,7 +47,6 @@ public class EntityBuilderTest {
      * Default constructor.
      */
     public EntityBuilderTest() {
-
     }
 
     @BeforeClass
