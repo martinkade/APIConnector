@@ -1,15 +1,15 @@
-# APIConnector
-Framework to make async http requests sending and receiving Java objects.
-These objects will be encoded to json strings and decoded from json strings, respectively, using Java annotations.
+# HTTPJson
+Framework to make async HTTP requests sending and receiving Java objects.
+These objects will be encoded to JSON strings and decoded from JSON strings, respectively, using Java annotations.
 
 ## Usage
 ### Defining an entity class
-To start with, you have to specify an entity class using annotations to identify its attributes.
+To start with, one has to specify an entity class using annotations to identify relevant attributes.
 ```java
-public class TestEntity implements APIService.Entity {
+public class ResponseEntity implements ApiService.Entity {
   
-    @JSONAttribute(name = "user")
-    private String user;
+    @JsonAttribute(name = "status")
+    private String status;
     
     /*...*/
 }
@@ -18,27 +18,27 @@ public class TestEntity implements APIService.Entity {
 Then setup the service instance itself and the delegate object, either by implementing its methods at class level
 or as object (see below).
 ```java
-final APIService.Delegate delegate = new APIService.Delegate<TestEntity>() { /*...*/ };
-final APIService<TestEntity> service = new APIService<>(delegate);
+final ApiService.Delegate delegate = new ApiService.Delegate<ResponseEntity>() { /*...*/ };
+final ApiService<ResponseEntity, RequestEntity> service = new ApiService<>(delegate);
 
 /*...*/
 ```
 Then you are ready to build a post request, for instance, setting some parameters like timeout or charset. You can post Java
-objects directly as long as the class of each of these objects is implementing the `APIService.Entity` interface. Alternatively,
+objects directly as long as the class of each of these objects is implementing the `ApiService.Entity` interface. Alternatively,
 you can post a plain `java.util.Map` by calling `post.setRawRequestData(map)`.
 ```java
 /*...*/
 
-final APIPostRequest<TestEntity> post = new APIPostRequest<>("http://example.com/data.php", TestEntity.class);
-post.setTimeoutSeconds(5);
-post.addUrlParam("key", "value");
+final ApiPutRequest<ResponseEntity, RequestEntity> put = new ApiPutRequest<>("http://api.example.com/data", ResponseEntity.class);
+put.setTimeoutSeconds(5);
+put.addUrlParam("key", "value");
 
 // init entity object to be posted
-final TestEntity e = new TestEntity();
-e.setUser("martinkade");
-e.setPassword("1***56");
+final RequestEntity e = new RequestEntity();
+e.setFoo("foo");
+e.setBar("bar");
 
-post.setRequestData(e);
+put.setRequestData(e);
 
 /*...*/
 ```
@@ -47,16 +47,20 @@ You can tag the request with a string in order to be able to identify it in the 
 ```java
 /*...*/
 
-service.exec(post, 0, "post_test");
+service.exec(put, "put-test");
 ```
 ### Receiving an object
 You can access the entity objects through the delegate methods.
 ```java
+
 @Override
-public void apiServiceDidReceiveResponse(TestEntity obj, long execTimeMillis, String id, int httpStatusCode) {
+public void apiServiceWillSendResponse(Runnable runnable) { /*...*/ }
+
+@Override
+public void apiServiceDidReceiveResponse(ResponseEntity obj, long execTimeMillis, String id, int httpStatusCode) {
     /* TODO: do something with the data */
 }
 
 @Override
-public void apiServiceDidThrowException(APIException ex, String id, int httpStatusCode) { /*...*/ }
+public void apiServiceDidThrowException(ApiException ex, String id, int httpStatusCode) { /*...*/ }
 ```
